@@ -50,7 +50,7 @@ struct SortElemDescend {
 };
 
 template<typename DType>
-inline void MultiBoxTargetForward(const Tensor<cpu, 2, DType> &loc_target,
+inline void MultiBoxTargetForward(Stream<cpu> *s, const Tensor<cpu, 2, DType> &loc_target,
                            const Tensor<cpu, 2, DType> &loc_mask,
                            const Tensor<cpu, 2, DType> &cls_target,
                            const Tensor<cpu, 2, DType> &anchors,
@@ -256,6 +256,32 @@ inline void MultiBoxTargetForward(const Tensor<cpu, 2, DType> &loc_target,
           *(p_loc_mask + offset + 3) = 0;
         }
       }  // end iterate anchors
+    } else { // if num_valid_gt == 0
+      LOG(INFO) << "num_valid_gt == 0";
+      std::vector<char> anchor_flags(num_anchors, -1);
+      std::vector<int> perm(num_anchors, 0);
+      for (auto idx = 0; idx < num_anchors; ++idx)
+          perm[idx] = idx;
+      std::random_shuffle(perm.begin(), perm.end());
+      int num_picks = std::min(400, static_cast<int>(1.0 / negative_mining_ratio * num_anchors));
+      for (auto idx = 0; idx < num_picks; ++idx)
+          anchor_flags[perm[idx]] = 0;
+
+      DType *p_loc_target = loc_target.dptr_ + nbatch * num_anchors * 4;
+      DType *p_loc_mask = loc_mask.dptr_ + nbatch * num_anchors * 4;
+      DType *p_cls_target = cls_target.dptr_ + nbatch * num_anchors;
+      for (int i = 0; i < num_anchors; ++i) {
+        if (anchor_flags[i] == 1) {
+          LOG(FATAL) << "Could not happen!!";
+        } else if (anchor_flags[i] == 0) {
+          *(p_cls_target + i) = 0;
+          int offset = i * 4;
+          *(p_loc_mask + offset) = 0;
+          *(p_loc_mask + offset + 1) = 0;
+          *(p_loc_mask + offset + 2) = 0;
+          *(p_loc_mask + offset + 3) = 0;
+        }
+      }
     }
   }  // end iterate batches
 }

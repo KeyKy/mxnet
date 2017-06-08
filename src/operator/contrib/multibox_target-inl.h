@@ -142,7 +142,7 @@ class MultiBoxTargetOp : public Operator {
       - temp_space[9];
     temp_space[0] = F<safe_divide>(temp_space[9], temp_space[10]);
 
-    MultiBoxTargetForward(loc_target, loc_mask, cls_target,
+    MultiBoxTargetForward(s, loc_target, loc_mask, cls_target,
                           anchors, labels, cls_preds, temp_space,
                           param_.overlap_threshold,
                           param_.ignore_label,

@@ -318,7 +318,7 @@ __global__ void AssignTrainigTargets(DType *loc_target, DType *loc_mask,
 }  // namespace cuda
 
 template<typename DType>
-inline void MultiBoxTargetForward(const Tensor<gpu, 2, DType> &loc_target,
+inline void MultiBoxTargetForward(Stream<gpu> *s, const Tensor<gpu, 2, DType> &loc_target,
                            const Tensor<gpu, 2, DType> &loc_mask,
                            const Tensor<gpu, 2, DType> &cls_target,
                            const Tensor<gpu, 2, DType> &anchors,
@@ -340,7 +340,7 @@ inline void MultiBoxTargetForward(const Tensor<gpu, 2, DType> &loc_target,
   CHECK_GT(num_labels, 2);
   CHECK_GE(num_anchors, 1);
   CHECK_EQ(variances.ndim(), 4);
-
+  
   // init ground-truth flags, by checking valid labels
   temp_space[1] = 0.f;
   DType *gt_flags = temp_space[1].dptr_;
@@ -381,14 +381,38 @@ inline void MultiBoxTargetForward(const Tensor<gpu, 2, DType> &loc_target,
       negative_mining_thresh, minimum_negative_samples,
       num_anchors, num_labels, num_classes);
     MULTIBOX_TARGET_CUDA_CHECK(cudaPeekAtLastError());
-  } else {
+  } else if (negative_mining_ratio < -1) {
+    int num_random_pick = std::min(num_anchors, static_cast<int>(-negative_mining_ratio));
+    std::vector<int> perm;
+    for (int idx = 0; idx < num_anchors; idx++) {
+      perm.push_back(idx);
+    }
+    
+    Tensor<cpu, 3, DType> ts(Shape3(num_batches, num_anchors, temp_space[2].size(2)));
+    AllocSpace(&ts);
+    Copy(ts, temp_space[2], s);
+    s->Wait();
+    DType* ts_dptr = ts.dptr_;
+
+    for (int b = 0; b < num_batches; b++) {
+      std::random_shuffle(perm.begin(), perm.end());
+      for (int p = 0; p < num_random_pick; p++) {
+        int achr_idx = perm[p];
+        if (*(ts_dptr + b * num_batches + achr_idx) == -1)
+          *(ts_dptr + b * num_batches + achr_idx) = 0;
+      }
+    }
+
+    Copy(temp_space[2], ts, s);
+    s->Wait();
+  }
+  else {
     int num_blocks = (num_batches * num_anchors - 1) / num_threads + 1;
     cuda::CheckLaunchParam(num_blocks, num_threads, "MultiBoxTarget Negative");
     cuda::UseAllNegatives<DType><<<num_blocks, num_threads>>>(anchor_flags,
       num_batches * num_anchors);
     MULTIBOX_TARGET_CUDA_CHECK(cudaPeekAtLastError());
   }
-
   cuda::AssignTrainigTargets<DType><<<num_batches, num_threads>>>(
     loc_target.dptr_, loc_mask.dptr_, cls_target.dptr_, anchor_flags,
     best_matches, labels.dptr_, anchors.dptr_, num_anchors, num_labels,

@@ -245,6 +245,13 @@ class ImageDetLabel {
     header_.assign(raw_label.begin(), raw_label.begin() + header_width);
     int num = (label_width - header_width) / object_width_;
     CHECK_EQ((label_width - header_width) % object_width_, 0);
+    
+    if (*(raw_label.cbegin()+header_width) == -1.0) {
+      objects_.clear();
+      objects_.reserve(0);
+      return;
+    }
+
     objects_.reserve(num);
     for (int i = header_width; i < label_width; i += object_width_) {
       ImageDetObject obj;
