@@ -122,9 +122,9 @@ def fit(args, network, data_loader, **kwargs):
         aux_params = kwargs['aux_params']
     else:
         sym, arg_params, aux_params = _load_model(args, kv.rank)
-        if sym is not None:
-            assert sym.tojson() == network.tojson()
-
+        if sym is not None and network is None:
+            network = sym
+            logging.info('Loading symbol')
     # save model
     checkpoint = _save_model(args, kv.rank)
 

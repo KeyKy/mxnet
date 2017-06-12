@@ -10,6 +10,7 @@ if __name__ == '__main__':
     # parse args
     parser = argparse.ArgumentParser(description="train cifar10",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--deploy', action='store_true', default=False)
     fit.add_fit_args(parser)
     data.add_data_args(parser)
     data.add_data_aug_args(parser)
@@ -26,15 +27,18 @@ if __name__ == '__main__':
         min_random_scale = 1, # if input image has min size k, suggest to use
                               # 256.0/x, e.g. 0.533 for 480
         # train
-        num_epochs       = 80,
+        num_epochs       = 100,
         lr_step_epochs   = '30,60',
     )
     args = parser.parse_args()
 
     # load network
-    from importlib import import_module
-    net = import_module('symbols.'+args.network)
-    sym = net.get_symbol(**vars(args))
+    if not args.deploy:
+        from importlib import import_module
+        net = import_module('symbols.'+args.network)
+        sym = net.get_symbol(**vars(args))
+    else:
+        sym = None
 
     # train
     fit.fit(args, sym, data.get_rec_iter)
