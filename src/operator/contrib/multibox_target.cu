@@ -405,6 +405,7 @@ inline void MultiBoxTargetForward(Stream<gpu> *s, const Tensor<gpu, 2, DType> &l
 
     Copy(temp_space[2], ts, s);
     s->Wait();
+    FreeSpace(&ts);
   }
   else {
     int num_blocks = (num_batches * num_anchors - 1) / num_threads + 1;
