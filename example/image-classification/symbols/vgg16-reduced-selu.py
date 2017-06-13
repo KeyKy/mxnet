@@ -42,8 +42,7 @@ def get_symbol(num_classes=1000, **kwargs):
         data=relu3_2, kernel=(3, 3), pad=(1, 1), num_filter=256, name="conv3_3")
     relu3_3 = selu(data=conv3_3)
     pool3 = mx.symbol.Pooling(
-        data=relu3_3, pool_type="max", kernel=(2, 2), stride=(2, 2), \
-        pooling_convention="full", name="pool3")
+        data=relu3_3, pool_type="max", kernel=(2, 2), stride=(2, 2), name="pool3")
     # group 4
     conv4_1 = mx.symbol.Convolution(
         data=pool3, kernel=(3, 3), pad=(1, 1), num_filter=512, name="conv4_1")
@@ -67,11 +66,10 @@ def get_symbol(num_classes=1000, **kwargs):
         data=relu5_2, kernel=(3, 3), pad=(1, 1), num_filter=512, name="conv5_3")
     relu5_3 = selu(data=conv5_3)
     pool5 = mx.symbol.Pooling(
-        data=relu5_3, pool_type="max", kernel=(3, 3), stride=(1, 1),
-        pad=(1,1), name="pool5")
+        data=relu5_3, pool_type="max", kernel=(2, 2), stride=(2, 2), name="pool5")
     # group 6
     conv6 = mx.symbol.Convolution(
-        data=pool5, kernel=(3, 3), pad=(6, 6), dilate=(6, 6),
+        data=pool5, kernel=(3, 3), pad=(3, 3), dilate=(3, 3),
         num_filter=1024, name="conv6")
     relu6 = selu(data=conv6)
     # drop6 = mx.symbol.Dropout(data=relu6, p=0.5, name="drop6")
@@ -83,6 +81,8 @@ def get_symbol(num_classes=1000, **kwargs):
 
     conv8 = mx.symbol.Convolution(
         data=relu7, kernel=(1, 1), pad=(0, 0), num_filter=num_classes, name="conv8")
-    softmax = mx.symbol.SoftmaxOutput(data=fc8, name='softmax')
+    pool_last = mx.symbol.Pooling(data=conv8, kernel=(7,7), global_pool=True, name='pool_last', pool_type='avg')
+    flatten = mx.sym.Flatten(data=pool_last, name="flatten")
+    softmax = mx.symbol.SoftmaxOutput(data=flatten, name='softmax')
 
     return softmax
