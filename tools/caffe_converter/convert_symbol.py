@@ -128,6 +128,9 @@ def _parse_proto(prototxt_fname):
         name = re.sub('[-/]', '_', layer.name)
         if layer.type == 'Convolution' or layer.type == 4:
             type_string = 'mx.symbol.Convolution'
+            conv_param = layer.convolution_param
+            if conv_param.group == conv_param.num_output:
+                type_string = 'mx.symbol.ChannelwiseConvolution'
             param_string = _convert_conv_param(layer.convolution_param)
             need_flatten[name] = True
         if layer.type == 'Deconvolution' or layer.type == 39:

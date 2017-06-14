@@ -1,8 +1,11 @@
 """Convert caffe model
 """
 from __future__ import print_function
-import argparse
 import sys
+sys.path.insert(0, '/data2/obj_detect/mxnet/python')
+sys.path.insert(0, '/data2/obj_detect/ssd/caffe/python')
+
+import argparse
 import caffe_parser
 import mxnet as mx
 import numpy as np
@@ -141,7 +144,9 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             aux_params[var_name] = mx.nd.zeros(var.shape)
             # Get the original epsilon
             for idx, layer in enumerate(layers_proto):
-                if layer.name == bn_name:
+                import re
+                layer_name = re.sub('[-/]', '_', layer.name)
+                if layer_name == bn_name:
                     bn_index = idx
             eps_caffe = layers_proto[bn_index].batch_norm_param.eps
             # Compensate for the epsilon shift performed in convert_symbol

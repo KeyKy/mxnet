@@ -36,6 +36,7 @@ def read_caffemodel(prototxt_fname, caffemodel_fname):
     """Return a caffe_pb2.NetParameter object that defined in a binary
     caffemodel file
     """
+    caffe.set_device(2)
     if use_caffe:
         caffe.set_mode_cpu()
         net = caffe.Net(prototxt_fname, caffemodel_fname, caffe.TEST)
