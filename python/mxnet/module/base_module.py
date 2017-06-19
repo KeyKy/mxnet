@@ -350,7 +350,8 @@ class BaseModule(object):
                 break
             self.forward(eval_batch, is_train=False)
             pad = eval_batch.pad
-            outputs = [out[0:out.shape[0]-pad].copy() for out in self.get_outputs()]
+            import mxnet as mx
+            outputs = [out[0:out.shape[0]-pad].as_in_context(mx.cpu()).copy() for out in self.get_outputs()]
 
             output_list.append(outputs)
 
